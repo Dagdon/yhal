@@ -44,3 +44,14 @@ const checkFoodPermissions = (req, res, next) => {
 
 // Export the middleware functions
 export { validateFoodData, processFoodImage, checkFoodPermissions };
+
+export const validateImageFile = (file) => {
+  if (!file) throw new Error('No file provided');
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+  if (!allowedTypes.includes(file.mimetype)) {
+    throw new Error('Invalid file type. Only JPEG/PNG allowed');
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('File size exceeds 5MB limit');
+  }
+};
