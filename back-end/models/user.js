@@ -4,7 +4,9 @@ import dbConfig from '../config/db.js';
 // Define User model
 class User {
   // constructor to initialize user properties
-  constructor({ firstName, lastName, email, password, resetToken = null, resetTokenExpiry = null }) {
+  constructor({
+    firstName, lastName, email, password, resetToken = null, resetTokenExpiry = null,
+  }) {
     this.firstName = firstName;
     this.lastName = lastName;
     this.email = email;
@@ -53,7 +55,7 @@ class User {
     const query = `
       UPDATE users
       SET first_name = ?, last_name = ?, email = ?, password = ?
-      	reset_token = ?, reset_token_expiry = ?
+        reset_token = ?, reset_token_expiry = ?
       WHERE id = ?
     `;
     const values = [

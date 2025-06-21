@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer';
 
 // Environment checks
 if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD || !process.env.EMAIL_FROM) {
-  throw new Error("Missing email configuration. Check your .env file.");
+  throw new Error('Missing email configuration. Check your .env file.');
 }
 
 // Initialize rate limiting storage
@@ -62,9 +62,9 @@ export const sendResetEmail = async (email, token) => {
 				</div>
 				<p><small>This link expires in 15 minutes.</small></p>
 				${process.env.SUPPORT_EMAIL
-        ? `<p>Need help? Contact <a href="mailto:${process.env.SUPPORT_EMAIL}">${process.env.SUPPORT_EMAIL}</a></p>`
-        : ''
-      }
+    ? `<p>Need help? Contact <a href="mailto:${process.env.SUPPORT_EMAIL}">${process.env.SUPPORT_EMAIL}</a></p>`
+    : ''
+}
 			</body>
 			</html>`,
       text: `To reset your password, visit: ${resetLink}\n\nThis link expires in 15 minutes.`,
@@ -73,7 +73,6 @@ export const sendResetEmail = async (email, token) => {
     // Update last sent timestamp
     lastEmailTimestamps.set(email, Date.now());
     console.log(`Reset email sent to ${email}`);
-
   } catch (error) {
     console.error('Email delivery failed:', error);
     throw new Error('Failed to send reset email. Please try again later.');

@@ -1,141 +1,148 @@
-// Import required modules and services
-import aiService from './aiService.js';
-import calorieService from './calorieService.js';
-import { validateImageFile, validatePortionSize } from './validationUtils.js';
 import multer from 'multer';
 import redis from 'redis';
 import { createHash } from 'crypto';
 import { rateLimit } from 'express-rate-limit';
+import sanitizeHtml from 'sanitize-html';
+import { validateImageFile, validatePortionSize } from './validationUtils.js';
+import calorieService from './calorieService.js';
+import aiService from './aiService.js';
 import uploadMiddleware from './uploadMiddleware.js';
 import { validateFoodData, processFoodImage, checkFoodPermissions } from './foodMiddleware.js';
 
-// Initialize Redis client for caching
+// Redis client with error handling and retries
 const connectRedis = async () => {
-  const client = redis.createClient();
-  client.on('error', (err) => console.log('Redis Client Error', err));
-  await client.connect();
-  return client;
+  const client = redis.createClient({
+    socket: { reconnectStrategy: (retries) => Math.min(retries * 100, 5000) },
+  });
+  try {
+    await client.connect();
+    return client;
+  } catch (err) {
+    throw new Error(`Redis connection failed: ${err.message}`);
+  }
 };
 const redisClient = await connectRedis();
 
-// Rate limiting configuration
+// Rate limiters
 const apiLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 30, // Limit each IP to 30 requests per hour
+  windowMs: 60 * 60 * 1000,
+  max: 30,
   message: 'Too many requests from this IP, please try again after an hour',
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 const analysisLimiter = rateLimit({
-  windowMs: 5 * 1000, // 5 seconds
-  max: 1, // Limit each IP to 1 request per 5 seconds
+  windowMs: 5 * 1000,
+  max: 1,
   message: 'Please wait 5 seconds between food analysis requests',
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Middleware chain for image upload and processing
+// Middleware chain for image processing
 const uploadFoodImageChain = [
-  checkFoodPermissions, // First check permissions
-  uploadMiddleware,     // Then handle file upload
-  processFoodImage,      // Then process the image
+  checkFoodPermissions,
+  uploadMiddleware,
+  processFoodImage,
 ];
 
 const foodController = {
-  // Analyze food image and predict ingredients with rate limiting
   analyzeFoodImage: [
-    ...uploadFoodImageChain, // Include upload middleware chain
-    analysisLimiter,         // Then apply rate limiting
+    ...uploadFoodImageChain,
+    analysisLimiter,
     async (req, res, next) => {
       try {
-        // The middleware chain should have processed the file and attached it to req.file
         validateImageFile(req.file);
+        const cacheKey = `food:${req.user?.id || 'anon'}:${
+          createHash('sha256').update(req.file.buffer).digest('hex')
+        }`;
 
-        // Create cache key from image hash and user ID
-        const cacheKey = `food:${req.user?.id || 'anon'}:${createHash('md5')
-          .update(req.file.buffer)
-          .digest('hex')}`;
-
-        // Check cache first
         const cached = await redisClient.get(cacheKey);
-        if (cached) {
-          return res.status(200).json(JSON.parse(cached));
-        }
+        if (cached) return res.status(200).json(JSON.parse(cached));
 
-        // Call AI service if not cached
         const { predictedIngredients, predictedName, predictedOrigin } = await aiService.predictIngredients(req.file);
 
-        // Cache results for 1 hour
+        const sanitizedData = {
+          foodName: sanitizeHtml(predictedName),
+          regionalOrigin: sanitizeHtml(predictedOrigin),
+          ingredients: predictedIngredients.map(sanitizeHtml),
+        };
+
         const responseData = {
           status: 'success',
           data: {
-            foodName: predictedName,
-            regionalOrigin: predictedOrigin,
-            ingredients: predictedIngredients,
+            ...sanitizedData,
             message: 'Please confirm or modify the details',
           },
         };
-        await redisClient.setEx(cacheKey, 3600, JSON.stringify(responseData));
 
-        res.status(200).json(responseData);
+        await redisClient.setEx(cacheKey, 3600, JSON.stringify(responseData));
+        return res.status(200).json(responseData);
       } catch (error) {
-        next(error);
+        if (req.file?.buffer) {
+          const cacheKey = `food:${req.user?.id || 'anon'}:${
+            createHash('sha256').update(req.file.buffer).digest('hex')
+          }`;
+          await redisClient.setEx(cacheKey, 300, JSON.stringify({
+            status: 'retry',
+          }));
+        }
+        return next(error);
       }
     },
   ],
 
-  // Calculate nutrition with portion control
   calculateNutrition: [
-    validateFoodData, // Validate input data first
-    apiLimiter,       // Then apply rate limiting
+    validateFoodData,
+    apiLimiter,
     async (req, res, next) => {
       try {
-        const { ingredients, foodName, regionalOrigin, portionSize } = req.body;
+        const {
+          ingredients, foodName, regionalOrigin, portionSize,
+        } = req.body;
         validatePortionSize(portionSize);
 
-        // Create cache key from ingredients hash and portion
-        const ingredientsHash = createHash('md5')
-          .update(JSON.stringify({ ingredients, portionSize }))
-          .digest('hex');
-        const cacheKey = `nutrition:${ingredientsHash}`;
+        const sanitizedInput = {
+          ingredients: ingredients.map(sanitizeHtml),
+          foodName: sanitizeHtml(foodName),
+          regionalOrigin: sanitizeHtml(regionalOrigin),
+        };
 
-        // Check cache first
+        const cacheKey = `nutrition:${
+          createHash('sha256').update(
+            JSON.stringify({ ingredients: sanitizedInput.ingredients, portionSize }),
+          ).digest('hex')
+        }`;
+
         const cached = await redisClient.get(cacheKey);
-        if (cached) {
-          return res.status(200).json(JSON.parse(cached));
-        }
+        if (cached) return res.status(200).json(JSON.parse(cached));
 
-        // Calculate if not cached
         const nutritionInfo = await calorieService.calculateNutrition(
-          ingredients,
+          sanitizedInput.ingredients,
           portionSize,
-          regionalOrigin,
+          sanitizedInput.regionalOrigin,
         );
 
-        // Cache results for 24 hours
         const responseData = {
           status: 'success',
           data: {
-            foodName,
-            regionalOrigin,
+            ...sanitizedInput,
             portionSize,
             ...nutritionInfo,
             message: 'Nutrition information calculated',
           },
         };
-        await redisClient.setEx(cacheKey, 86400, JSON.stringify(responseData));
 
-        res.status(200).json(responseData);
+        await redisClient.setEx(cacheKey, 86400, JSON.stringify(responseData));
+        return res.status(200).json(responseData);
       } catch (error) {
-        next(error);
+        return next(error);
       }
     },
   ],
 
-  // Handle errors from other middleware/controllers specific to food processing
   handleFoodErrors(err, req, res, next) {
-    // Handle specific error types for food processing
     if (err.code === 'INGREDIENT_PREDICTION_FAILED') {
       return res.status(400).json({
         status: 'fail',
@@ -150,7 +157,6 @@ const foodController = {
       });
     }
 
-    // Handle multer errors specifically
     if (err instanceof multer.MulterError) {
       return res.status(400).json({
         status: 'fail',
@@ -158,7 +164,6 @@ const foodController = {
       });
     }
 
-    // Pass to default error handler if not a food-specific error
     next(err);
   },
 };

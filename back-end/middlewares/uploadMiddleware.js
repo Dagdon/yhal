@@ -8,7 +8,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     // Generate a unique filename using the current timestamp and original file extension
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     const fileExtension = path.extname(file.originalname);
     cb(null, uniqueSuffix + fileExtension);
   },

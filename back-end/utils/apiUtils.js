@@ -3,47 +3,35 @@ import redis from 'redis';
 import { createHash } from 'crypto';
 
 // API RESPONSE HANDLERS
+export const successResponse = (res, data, message = 'Success', statusCode = 200) => res.status(statusCode).json({
+  status: 'success',
+  message,
+  data,
+});
 
-export const successResponse = (res, data, message = 'Success', statusCode = 200) => {
-  return res.status(statusCode).json({
-    status: 'success',
-    message,
-    data,
-  });
-};
-
-export const errorResponse = (res, message, statusCode = 400, code = 'API_ERROR') => {
-  return res.status(statusCode).json({
-    status: 'error',
-    code,
-    message,
-  });
-};
+export const errorResponse = (res, message, statusCode = 400, code = 'API_ERROR') => res.status(statusCode).json({
+  status: 'error',
+  code,
+  message,
+});
 
 // RATE LIMIT CONFIGURATIONS
-
-/**
- * Strict rate limiter for image processing endpoints
- */
-
 export const strictImageLimiter = rateLimit({
-  windowMs: 5 * 1000, // 5-second window
-  max: 1, // 1 request per window
+  windowMs: 5 * 1000,
+  max: 1,
   message: 'Too many image uploads. Please wait 5 seconds.',
   standardHeaders: true,
-  skip: (req) => req.user?.isPremium, // Skip for premium users
+  skip: (req) => req.user?.isPremium,
 });
 
 export const apiRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 100,
-  message: 'Too many API requests from this IP',
+  message: 'Too many requests from this user',
   standardHeaders: true,
 });
 
 // CACHING UTILITIES
-
-// Initialize Redis client
 let redisClient;
 
 const initRedis = async () => {
@@ -53,18 +41,16 @@ const initRedis = async () => {
 };
 await initRedis();
 
-/**
- * Generate cache key from request parameters
- * @param {Object} req - Express request object
- * @returns {string} - Generated cache key
- */
 const generateCacheKey = (req) => {
-  const { method, originalUrl, body, query } = req;
-  const keyData = { method, originalUrl, body, query };
+  const {
+    method, originalUrl, body, query,
+  } = req;
+  const keyData = {
+    method, originalUrl, body, query,
+  };
   return `cache:${createHash('md5').update(JSON.stringify(keyData)).digest('hex')}`;
 };
 
-// Middleware to check cache before processing
 export const checkCache = async (req, res, next) => {
   try {
     const key = generateCacheKey(req);
@@ -74,19 +60,13 @@ export const checkCache = async (req, res, next) => {
       return successResponse(res, JSON.parse(cachedData), 'Data served from cache');
     }
 
-    req.cacheKey = key; // Attach key for later use
-    next();
+    req.cacheKey = key;
+    return next();
   } catch (err) {
-    next(err);
+    return next(err);
   }
 };
 
-/**
- * Save data to cache
- * @param {string} key - Cache key
- *  @param {Object} data - Data to cache
- *  @param {number} [ttl=3600] - Time-to-live in seconds
- */
 export const saveToCache = async (key, data, ttl = 3600) => {
   try {
     await redisClient.setEx(key, ttl, JSON.stringify(data));
@@ -95,11 +75,7 @@ export const saveToCache = async (key, data, ttl = 3600) => {
   }
 };
 
-// REQUEST VALIDATION MIDDLEWARE
-
-/**
- * Validates API key header
- */
+// VALIDATION MIDDLEWARE
 export const validateApiKey = (req, res, next) => {
   const apiKey = req.headers['x-api-key'];
 
@@ -107,12 +83,9 @@ export const validateApiKey = (req, res, next) => {
     return errorResponse(res, 'Invalid or missing API key', 401);
   }
 
-  next();
+  return next();
 };
 
-/**
- * Validates African region parameter
- */
 export const validateRegion = (req, res, next) => {
   const validRegions = ['west', 'east', 'north', 'south', 'central'];
 
@@ -120,7 +93,7 @@ export const validateRegion = (req, res, next) => {
     return errorResponse(res, `Invalid region. Must be one of: ${validRegions.join(', ')}`, 400);
   }
 
-  next();
+  return next();
 };
 
 // PAGINATION UTILITIES
@@ -136,13 +109,6 @@ export const paginate = (totalItems, currentPage = 1, perPage = 10) => {
   };
 };
 
-/**
- * Applies pagination to query results
- * @param {Array} data - Full dataset
- * @param {number} page - Current page
- * @param {number} limit - Items per page
- * @returns {Object} Paginated results
- */
 export const paginateResults = (data, page = 1, limit = 10) => {
   const startIdx = (page - 1) * limit;
   const endIdx = page * limit;
@@ -154,23 +120,14 @@ export const paginateResults = (data, page = 1, limit = 10) => {
 };
 
 export default {
-  // Response handlers
   successResponse,
   errorResponse,
-
-  // Rate limiting
   strictImageLimiter,
   apiRateLimiter,
-
-  // Caching
   checkCache,
   saveToCache,
-
-  // Validation
   validateApiKey,
   validateRegion,
-
-  // Pagination
   paginate,
   paginateResults,
 };

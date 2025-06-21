@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken'; // For generating/verifying tokens
 import bcrypt from 'bcrypt'; // For password hashing
-import User from '../models/user.js'; // User model
 import dotenv from 'dotenv'; // For environment variables
+import User from '../models/user.js'; // User model
 import { sendResetEmail } from '../services/emailService.js';
 
 dotenv.config(); // Load .env variables
@@ -12,14 +12,16 @@ const TOKEN_EXPIRATION_MS = 15 * 60 * 1000; // 15 minutes in milliseconds
 
 const authController = {
   /**
-	 * Handles user registration
-	 * Hashes password
-	 * Creates user
-	 * Generates JWT
-	 */
+   * Handles user registration
+   * Hashes password
+   * Creates user
+   * Generates JWT
+   */
   async register(req, res) {
     try {
-      const { firstName, lastName, email, password } = req.body;
+      const {
+        firstName, lastName, email, password,
+      } = req.body;
 
       // Hash password with bcrypt (10 salt rounds)
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -47,10 +49,10 @@ const authController = {
   },
 
   /*
-	 * Handles user login
-	 * 1. Verifies credentials
-	 * 2. Generates JWT
-	 */
+   * Handles user login
+   * 1. Verifies credentials
+   * 2. Generates JWT
+   */
   async login(req, res) {
     try {
       const { email, password } = req.body;
@@ -75,9 +77,9 @@ const authController = {
       );
 
       return res.json({
-	      token,
-	      userId: user.id,
-	      expiresIn: TOKEN_EXPIRATION_MS,
+        token,
+        userId: user.id,
+        expiresIn: TOKEN_EXPIRATION_MS,
       });
     } catch (error) {
       console.error('Login error:', error);
@@ -86,11 +88,11 @@ const authController = {
   },
 
   /*
-	 * Initiates password reset
-	 * 1. Generates reset token (valid 15 minutes)
-	 * 2. Saves token to user record
-	 * Note: In production, you would send an email with the token
-	 */
+   * Initiates password reset
+   * 1. Generates reset token (valid 15 minutes)
+   * 2. Saves token to user record
+   * Note: In production, you would send an email with the token
+   */
   async requestPasswordReset(req, res) {
     try {
       const { email } = req.body;
@@ -123,11 +125,11 @@ const authController = {
   },
 
   /**
-	 * Completes password reset
-	 * 1. Validates reset token
-	 * 2. Updates password
-	 * 3. Clears used token
-	 */
+   * Completes password reset
+   * 1. Validates reset token
+   * 2. Updates password
+   * 3. Clears used token
+   */
   async resetPassword(req, res) {
     try {
       const { token, newPassword } = req.body;

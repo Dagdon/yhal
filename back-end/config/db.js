@@ -6,8 +6,8 @@ dotenv.config();
 
 //  Export database configuration
 export default {
-  host: process.env.DB_HOST,      // Database host
-  user: process.env.DB_USER,      // Database user
+  host: process.env.DB_HOST, // Database host
+  user: process.env.DB_USER, // Database user
   password: process.env.DB_PASSWORD, // Database password
-  database: process.env.DB_NAME,  // Database name
+  database: process.env.DB_NAME, // Database name
 };
