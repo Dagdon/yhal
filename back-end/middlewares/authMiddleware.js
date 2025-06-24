@@ -29,8 +29,7 @@ const verifyToken = (req, res, next) => {
 };
 
 // Main authentication middleware
-const authMiddleware = (req, res, next) => verifyToken(req, res, next) //
-;
+const authMiddleware = (req, res, next) => verifyToken(req, res, next);
 
 export default authMiddleware;
 export { generateToken };

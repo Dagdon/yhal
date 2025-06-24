@@ -3,11 +3,11 @@ import redis from 'redis';
 import { createHash } from 'crypto';
 import { rateLimit } from 'express-rate-limit';
 import sanitizeHtml from 'sanitize-html';
-import { validateImageFile, validatePortionSize } from './validationUtils.js';
-import calorieService from './calorieService.js';
-import aiService from './aiService.js';
-import uploadMiddleware from './uploadMiddleware.js';
-import { validateFoodData, processFoodImage, checkFoodPermissions } from './foodMiddleware.js';
+import { validateImageFile, validatePortionSize } from './validationUtils';
+import calorieService from '../services/calorieService';
+import aiService from '../services/aiService';
+import uploadMiddleware from '../middlewares/uploadMiddleware';
+import { validateFoodData, processFoodImage, checkFoodPermissions } from '../middlewares/foodMiddleware';
 
 // Redis client with error handling and retries
 const connectRedis = async () => {
@@ -164,7 +164,7 @@ const foodController = {
       });
     }
 
-    next(err);
+    return next(err); // Added return
   },
 };
 

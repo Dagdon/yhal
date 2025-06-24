@@ -1,5 +1,5 @@
 import mysql from 'mysql2/promise';
-import dbConfig from '../config/db.js';
+import dbConfig from '../config/db';
 
 // Define User model
 class User {

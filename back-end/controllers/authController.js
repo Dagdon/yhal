@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken'; // For generating/verifying tokens
 import bcrypt from 'bcrypt'; // For password hashing
 import dotenv from 'dotenv'; // For environment variables
-import User from '../models/user.js'; // User model
-import { sendResetEmail } from '../services/emailService.js';
+import User from '../models/user'; // User model
+import { sendResetEmail } from '../services/emailService';
 
 dotenv.config(); // Load .env variables
 

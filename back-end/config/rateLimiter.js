@@ -1,28 +1,24 @@
 import { RateLimiterRedis } from 'rate-limiter-flexible';
-import redisClient from './redisConfig.js'; // Use your redis client
-import AppError from './AppError.js';
+import redisClient from './redisConfig';
+import AppError from '../utils/AppError';
 
 const rateLimitConfigs = {
-  // Strict limits for auth endpoints
   auth: {
-    points: 5, // 5 attempts
-    duration: 60 * 15, // 15 minutes
-    blockDuration: 60 * 60, // 1 hour block if exceeded
+    points: 5,
+    duration: 60 * 15,
+    blockDuration: 60 * 60,
   },
-  // More generous for general API
   api: {
-    points: 100, // 100 requests
-    duration: 60 * 5, // 5 minutes
+    points: 100,
+    duration: 60 * 5,
   },
-  // Very strict for password reset
   passwordReset: {
-    points: 3, // 3 attempts
-    duration: 60 * 60, // 1 hour
-    blockDuration: 60 * 60 * 24, // 24 hour block if exceeded
+    points: 3,
+    duration: 60 * 60,
+    blockDuration: 60 * 60 * 24,
   },
 };
 
-// Create rate limiters
 const limiters = {
   authLimiter: new RateLimiterRedis({
     storeClient: redisClient,
@@ -41,30 +37,25 @@ const limiters = {
   }),
 };
 
-/**
- * Generic rate limit middleware
- */
 const rateLimiter = (limiterType) => async (req, res, next) => {
   try {
     const limiter = limiters[limiterType];
     if (!limiter) throw new Error('Invalid rate limiter type');
 
-    // Use IP + endpoint as key (or user ID if authenticated)
     const key = req.user?.id || req.ip;
     const routeKey = `${key}_${req.path}`;
 
     await limiter.consume(routeKey);
-    next();
+    return next(); // Added return
   } catch (error) {
     if (error instanceof Error) {
-      return next(error);
+      return next(error); // Added return
     }
 
-    // Rate limit exceeded
     const retryAfter = Math.ceil(error.msBeforeNext / 1000) || 1;
     res.set('Retry-After', String(retryAfter));
 
-    return next(new AppError(
+    return next(new AppError( // Added return
       'Too many requests. Please try again later.',
       429,
       {
@@ -76,13 +67,11 @@ const rateLimiter = (limiterType) => async (req, res, next) => {
   }
 };
 
-// Specific rate limiters
 export const registerLimiter = rateLimiter('authLimiter');
 export const loginLimiter = rateLimiter('authLimiter');
 export const passwordResetLimiter = rateLimiter('passwordResetLimiter');
 export const apiLimiter = rateLimiter('apiLimiter');
 
-// Close Redis connection on shutdown
 process.on('SIGTERM', async () => {
   await redisClient.quit();
 });

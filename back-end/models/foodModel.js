@@ -1,5 +1,5 @@
 import mysql from 'mysql2/promise'; // MySQL library for database operations
-import dbConfig from '../config/db.js'; // Database configuration
+import dbConfig from '../config/db'; // Database configuration
 
 class Food {
   // Create a new food item
@@ -47,6 +47,7 @@ class Food {
 
     try {
       const [rows] = await connection.execute(query); // Execute the query
+      return rows; // Added return statement to fix the warning
     } finally {
       await connection.end(); // Close the database connection
     }
@@ -85,7 +86,7 @@ class Food {
       const [result] = await connection.execute(query, values); // Execute the query
       return result.affectedRows > 0; // Return true if the food item was deleted
     } finally {
-      await connection.end(); // Close the database connectionexport default Food;
+      await connection.end(); // Close the database connection
     }
   }
 }
