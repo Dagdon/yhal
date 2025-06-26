@@ -1,16 +1,14 @@
-import AppError from './AppError.js';
+import AppError from './appError';
 
 export const validateImageFile = (file) => {
   if (!file) {
     throw new AppError('No image file provided', 400);
   }
-
   // Check file type
   const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg'];
   if (!allowedMimeTypes.includes(file.mimetype)) {
     throw new AppError('Only JPEG, PNG, and JPG images are allowed', 400);
   }
-
   // Check file size (5MB max)
   const maxSize = 5 * 1024 * 1024; // 5MB
   if (file.size > maxSize) {
@@ -28,7 +26,8 @@ export const validateIngredients = (ingredients) => {
     throw new AppError('Ingredients must be a non-empty array', 400);
   }
 
-  for (const ing of ingredients) {
+  for (let i = 0; i < ingredients.length; i += 1) {
+    const ing = ingredients[i];
     if (!ing.name || typeof ing.name !== 'string') {
       throw new AppError('Each ingredient must have a name string', 400);
     }
@@ -47,16 +46,13 @@ export const validatePortionSize = (portion) => {
   if (!portion || typeof portion !== 'object') {
     throw new AppError('Portion size is required', 400);
   }
-
   const validTypes = ['standard', 'weight', 'volume', 'pieces'];
   if (!validTypes.includes(portion.type)) {
     throw new AppError(`Portion type must be one of: ${validTypes.join(', ')}`, 400);
   }
-
   if (portion.type === 'weight' && portion.unit !== 'g') {
     throw new AppError('Weight portions must be in grams (g)', 400);
   }
-
   if (!portion.value || typeof portion.value !== 'number' || portion.value <= 0) {
     throw new AppError('Portion must have a positive numeric value', 400);
   }

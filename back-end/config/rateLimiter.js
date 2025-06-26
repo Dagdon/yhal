@@ -1,6 +1,6 @@
 import { RateLimiterRedis } from 'rate-limiter-flexible';
 import redisClient from './redisConfig';
-import AppError from '../utils/AppError';
+import AppError from '../utils/appError';
 
 const rateLimitConfigs = {
   auth: {
@@ -41,21 +41,17 @@ const rateLimiter = (limiterType) => async (req, res, next) => {
   try {
     const limiter = limiters[limiterType];
     if (!limiter) throw new Error('Invalid rate limiter type');
-
     const key = req.user?.id || req.ip;
     const routeKey = `${key}_${req.path}`;
-
     await limiter.consume(routeKey);
-    return next(); // Added return
+    return next();
   } catch (error) {
     if (error instanceof Error) {
-      return next(error); // Added return
+      return next(error);
     }
-
     const retryAfter = Math.ceil(error.msBeforeNext / 1000) || 1;
     res.set('Retry-After', String(retryAfter));
-
-    return next(new AppError( // Added return
+    return next(new AppError(
       'Too many requests. Please try again later.',
       429,
       {
@@ -72,6 +68,9 @@ export const loginLimiter = rateLimiter('authLimiter');
 export const passwordResetLimiter = rateLimiter('passwordResetLimiter');
 export const apiLimiter = rateLimiter('apiLimiter');
 
+// Add authLimiter as an alias for registerLimiter (in case your routes expect it)
+export const authLimiter = registerLimiter;
+
 process.on('SIGTERM', async () => {
   await redisClient.quit();
 });
@@ -81,4 +80,5 @@ export default {
   loginLimiter,
   passwordResetLimiter,
   apiLimiter,
+  authLimiter,
 };

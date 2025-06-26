@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken'; // For generating/verifying tokens
 import bcrypt from 'bcrypt'; // For password hashing
 import dotenv from 'dotenv'; // For environment variables
-import User from '../models/user'; // User model
-import { sendResetEmail } from '../services/emailService';
+import User from '../models/userModel'; // User model
+import { sendResetEmail, sendVerificationEmail } from '../services/emailService';
 
 dotenv.config(); // Load .env variables
 
@@ -87,11 +87,20 @@ const authController = {
     }
   },
 
+  // Handles user logout
+  async logout(req, res) {
+    try {
+      return res.json({ message: 'Successfully logged out' });
+    } catch (error) {
+      console.error('Logout error:', error);
+      return res.status(500).json({ error: 'Logout failed' });
+    }
+  },
+
   /*
    * Initiates password reset
    * 1. Generates reset token (valid 15 minutes)
    * 2. Saves token to user record
-   * Note: In production, you would send an email with the token
    */
   async requestPasswordReset(req, res) {
     try {
@@ -114,7 +123,7 @@ const authController = {
       // Save token to database
       await User.setResetToken(email, resetToken, expiry);
 
-      // In production: Send email with reset link
+      // Send email with reset link
       await sendResetEmail(email, resetToken);
 
       return res.json({ message: 'Reset link sent' });
@@ -152,6 +161,91 @@ const authController = {
       return res.status(500).json({ error: 'Password update failed. Please try again.' });
     }
   },
+
+  /**
+   * Verifies user email using verification token
+   * 1. Validates verification token
+   * 2. Marks user as verified
+   * 3. Clears verification token
+   */
+  async verifyEmail(req, res) {
+    try {
+      const { token } = req.params;
+
+      // Verify the token
+      try {
+        jwt.verify(token, process.env.JWT_SECRET);
+      } catch (jwtError) {
+        return res.status(400).json({ error: 'Invalid or expired verification token' });
+      }
+
+      // Find user by verification token
+      const user = await User.findByVerificationToken(token);
+      if (!user) {
+        return res.status(400).json({ error: 'Invalid verification token' });
+      }
+
+      // Check if already verified
+      if (user.isVerified) {
+        return res.status(400).json({ error: 'Email already verified' });
+      }
+
+      // Mark user as verified and clear verification token
+      await User.update(user.id, { isVerified: true });
+      await User.clearVerificationToken(user.email);
+
+      return res.json({ message: 'Email verified successfully' });
+    } catch (error) {
+      console.error('Email verification error:', error);
+      return res.status(500).json({ error: 'Email verification failed' });
+    }
+  },
+  /**
+   * Resends email verification
+   * For users who haven't verified their email yet
+   */
+  async resendVerification(req, res) {
+    try {
+      const { email } = req.body;
+      const user = await User.findByEmail(email);
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      if (user.isVerified) {
+        return res.status(400).json({ error: 'Email already verified' });
+      }
+
+      // Generate verification token
+      const verificationToken = jwt.sign(
+        { email, userId: user.id },
+        process.env.JWT_SECRET,
+        { expiresIn: TOKEN_EXPIRATION },
+      );
+
+      // Save verification token
+      await User.setVerificationToken(email, verificationToken);
+
+      // Send verification email
+      await sendVerificationEmail(email, verificationToken);
+
+      return res.json({ message: 'Verification email sent' });
+    } catch (error) {
+      console.error('Resend verification error:', error);
+      return res.status(500).json({ error: 'Could not resend verification email' });
+    }
+  },
 };
 
+// Named exports
+export const registerUser = authController.register;
+export const loginUser = authController.login;
+export const logoutUser = authController.logout;
+export const forgotPassword = authController.requestPasswordReset;
+export const { resetPassword } = authController;
+export const { resendVerification } = authController;
+export const { verifyEmail } = authController;
+
+// Default export
 export default authController;

@@ -26,8 +26,15 @@ CREATE TABLE IF NOT EXISTS foods (
 	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- Timestamp for when the food item was last updated
 );
 
--- Index for better performance on email lookups
-CREATE INDEX idx_users_email ON users(email);
+-- Add email verification fields
+ALTER TABLE users 
+ADD COLUMN is_verified BOOLEAN DEFAULT FALSE,
+ADD COLUMN verification_token VARCHAR(255) DEFAULT NULL,
+ADD COLUMN verification_token_expiry DATETIME DEFAULT NULL;
+
+-- Email index
+CREATE INDEX idx_verification_token ON users(verification_token);
+CREATE INDEX idx_reset_token ON users(reset_token);
 
 -- Index for reset token lookups
 CREATE INDEX idx_users_reset_token ON users(reset_token);

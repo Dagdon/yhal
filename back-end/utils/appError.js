@@ -13,12 +13,11 @@ class AppError extends Error {
    */
   constructor(message, statusCode, details = {}, isOperational = true) {
     super(message);
-    
+
     // Maintain proper stack trace
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, this.constructor);
     }
-
     this.name = this.constructor.name;
     this.statusCode = statusCode || 500;
     this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
@@ -71,7 +70,7 @@ class AppError extends Error {
   /**
    * Creates an "Internal Server Error" (500)
    * @static
-   * @param {string} [message='Internal server error'] 
+   * @param {string} [message='Internal server error']
    * @returns {AppError}
    */
   static internal(message = 'Internal server error') {
