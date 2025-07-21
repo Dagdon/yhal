@@ -1,5 +1,6 @@
 /* Base Styles */
 :root {
+    --primary-green: #2E7D32;       /* Header green */
     --spicy-clay: #B85233;          /* Spicy clay brown */
     --golden-brown: #D4A017;        /* Spicy golden brown */
     --coconut-creme: #FFF8F0;       /* Coconut creme background */
@@ -17,11 +18,33 @@
 body {
     font-family: 'Inter', sans-serif;
     background-color: var(--coconut-creme);
-    display: flex;
-    justify-content: center;
-    align-items: center;
     min-height: 100vh;
     padding: 20px;
+}
+
+/* Enhanced Header with Brighter Logo */
+.header {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    padding: 1.2rem 0;
+    background-color: var(--primary-green);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+}
+
+.header-container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+}
+
+.logo {
+    height: 55px;
+    width: auto;
+    filter: brightness(120%) contrast(130%) drop-shadow(0 2px 3px rgba(0,0,0,0.2));
 }
 
 /* Login Container */
@@ -30,8 +53,9 @@ body {
     max-width: 400px;
     background: white;
     padding: 40px;
-    border-radius: 16px; /* Curved edges */
+    border-radius: 16px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    margin: 110px auto 40px;
 }
 
 .login-title {
@@ -67,6 +91,7 @@ body {
     border-radius: 8px;
     font-size: 16px;
     transition: all 0.3s ease;
+    width: 100%;
 }
 
 .input-group input:focus {
@@ -75,9 +100,20 @@ body {
     box-shadow: 0 0 0 2px rgba(184, 82, 51, 0.2);
 }
 
-.input-group input::placeholder {
-    color: var(--text-medium);
-    opacity: 0.6;
+/* Forgot Password Link */
+.forgot-password {
+    font-size: 13px;
+    color: var(--golden-brown);
+    text-align: right;
+    text-decoration: none;
+    margin-top: 6px;
+    display: block;
+    transition: all 0.2s ease;
+}
+
+.forgot-password:hover {
+    text-decoration: underline;
+    color: #b58a1a;
 }
 
 /* Button Styles */
@@ -92,10 +128,11 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     margin-top: 10px;
+    width: 100%;
 }
 
 .login-button:hover {
-    background-color: #9a3e24; /* Darker clay */
+    background-color: #9a3e24;
     transform: translateY(-2px);
 }
 
@@ -115,19 +152,43 @@ body {
 }
 
 .signup-text:hover {
-    color: #b58a1a; /* Darker golden brown */
+    color: #b58a1a;
     text-decoration: underline;
 }
 
-/* Responsive Design */
-@media (max-width: 480px) {
+/* Enhanced Mobile Responsiveness */
+@media (max-width: 768px) {
+    .header {
+        padding: 1rem 0;
+    }
+    
+    .logo {
+        height: 50px;
+    }
+    
     .login-container {
+        margin-top: 100px;
+        padding: 35px 30px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header {
+        padding: 0.8rem 0;
+    }
+    
+    .logo {
+        height: 45px;
+    }
+    
+    .login-container {
+        margin-top: 90px;
         padding: 30px 20px;
     }
     
     .login-title {
         font-size: 24px;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
     }
     
     .login-form {
@@ -140,5 +201,9 @@ body {
     
     .login-button {
         padding: 14px;
+    }
+    
+    .forgot-password {
+        font-size: 12px;
     }
 }

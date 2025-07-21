@@ -1,5 +1,6 @@
 /* Base Styles */
 :root {
+    --primary-green: #2E7D32;       /* Header green */
     --spicy-clay: #B85233;          /* Spicy clay brown */
     --golden-brown: #D4A017;        /* Spicy golden brown */
     --coconut-creme: #FFF8F0;       /* Coconut creme background */
@@ -17,11 +18,33 @@
 body {
     font-family: 'Inter', sans-serif;
     background-color: var(--coconut-creme);
-    display: flex;
-    justify-content: center;
-    align-items: center;
     min-height: 100vh;
     padding: 20px;
+}
+
+/* Enhanced Header with Brighter Logo */
+.header {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    padding: 1.2rem 0;
+    background-color: var(--primary-green);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+}
+
+.header-container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+}
+
+.logo {
+    height: 55px;
+    width: auto;
+    filter: brightness(120%) contrast(130%) drop-shadow(0 2px 3px rgba(0,0,0,0.2));
 }
 
 /* Signup Container */
@@ -32,6 +55,7 @@ body {
     padding: 40px;
     border-radius: 16px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    margin: 110px auto 40px;
 }
 
 .signup-title {
@@ -82,22 +106,24 @@ body {
     box-shadow: 0 0 0 2px rgba(184, 82, 51, 0.2);
 }
 
-.input-group input::placeholder {
-    color: var(--text-medium);
-    opacity: 0.6;
+/* Verify Email Button */
+.verify-button {
+    background-color: var(--spicy-clay);
+    color: white;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 8px;
+    width: 100%;
 }
 
-.forgot-password {
-    font-size: 12px;
-    color: var(--golden-brown);
-    text-align: right;
-    text-decoration: none;
-    margin-top: 4px;
-    transition: all 0.2s ease;
-}
-
-.forgot-password:hover {
-    text-decoration: underline;
+.verify-button:hover {
+    background-color: #9a3e24;
+    transform: translateY(-2px);
 }
 
 /* Button Styles */
@@ -112,6 +138,7 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     margin-top: 10px;
+    width: 100%;
 }
 
 .signup-button:hover {
@@ -139,7 +166,22 @@ body {
     text-decoration: underline;
 }
 
-/* Responsive Design */
+/* Enhanced Mobile Responsiveness */
+@media (max-width: 768px) {
+    .header {
+        padding: 1rem 0;
+    }
+    
+    .logo {
+        height: 50px;
+    }
+    
+    .signup-container {
+        margin-top: 100px;
+        padding: 35px 30px;
+    }
+}
+
 @media (max-width: 600px) {
     .name-fields, .password-fields {
         grid-template-columns: 1fr;
@@ -148,13 +190,22 @@ body {
 }
 
 @media (max-width: 480px) {
+    .header {
+        padding: 0.8rem 0;
+    }
+    
+    .logo {
+        height: 45px;
+    }
+    
     .signup-container {
+        margin-top: 90px;
         padding: 30px 20px;
     }
     
     .signup-title {
         font-size: 24px;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
     }
     
     .signup-form {
@@ -165,7 +216,7 @@ body {
         padding: 12px 14px;
     }
     
-    .signup-button {
+    .verify-button, .signup-button {
         padding: 14px;
     }
 }
