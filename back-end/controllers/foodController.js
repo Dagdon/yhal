@@ -12,6 +12,7 @@ import {
   processFoodImage,
   checkFoodPermissions,
 } from '../middlewares/foodMiddleware';
+import pool from '../config/db'; // Import database connection
 
 // Redis client with error handling and retries
 const connectRedis = async () => {
@@ -341,6 +342,196 @@ const foodController = {
   },
 
   /**
+   * Gets user's frequently scanned foods for quick suggestions
+   * Returns foods ordered by frequency_count and last_accessed
+   */
+  async getCachedFoods(req, res, next) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({
+          status: 'fail',
+          message: 'Authentication required',
+        });
+      }
+
+      const connection = await pool.getConnection();
+      try {
+        const [foods] = await connection.execute(
+          `SELECT id, name, ingredients, calories, image_path, frequency_count, last_accessed
+           FROM foods 
+           WHERE user_id = ? 
+           ORDER BY frequency_count DESC, last_accessed DESC 
+           LIMIT 20`,
+          [userId]
+        );
+
+        return res.status(200).json({
+          status: 'success',
+          data: {
+            foods,
+            message: 'Frequently scanned foods retrieved',
+          },
+        });
+      } finally {
+        connection.release();
+      }
+    } catch (error) {
+      console.error('Error fetching cached foods:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to retrieve cached foods',
+      });
+    }
+  },
+
+  /**
+   * Processes new food scan - handles image analysis and saves to database
+   * Updates frequency count for existing foods or creates new entries
+   */
+  async processFoodScan(req, res, next) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({
+          status: 'fail',
+          message: 'Authentication required',
+        });
+      }
+
+      validateImageFile(req.file);
+      
+      const {
+        predictedIngredients,
+        predictedName,
+        predictedOrigin,
+      } = await aiService.predictIngredients(req.file);
+
+      const sanitizedData = {
+        foodName: sanitizeHtml(predictedName),
+        regionalOrigin: sanitizeHtml(predictedOrigin),
+        ingredients: predictedIngredients.map(sanitizeHtml),
+      };
+
+      const connection = await pool.getConnection();
+      try {
+        // Check if food already exists for this user
+        const [existingFoods] = await connection.execute(
+          `SELECT id, frequency_count FROM foods 
+           WHERE user_id = ? AND name = ? 
+           LIMIT 1`,
+          [userId, sanitizedData.foodName]
+        );
+
+        if (existingFoods.length > 0) {
+          // Update existing food frequency
+          await connection.execute(
+            `UPDATE foods 
+             SET frequency_count = frequency_count + 1, last_accessed = CURRENT_TIMESTAMP 
+             WHERE id = ? AND user_id = ?`,
+            [existingFoods[0].id, userId]
+          );
+        } else {
+          // Insert new food entry
+          await connection.execute(
+            `INSERT INTO foods (user_id, name, ingredients, calories, image_path, frequency_count)
+             VALUES (?, ?, ?, ?, ?, 1)`,
+            [
+              userId,
+              sanitizedData.foodName,
+              JSON.stringify(sanitizedData.ingredients),
+              0, // Default calories - can be updated later
+              req.file?.path || null,
+            ]
+          );
+        }
+
+        await connection.commit();
+
+        return res.status(200).json({
+          status: 'success',
+          data: {
+            ...sanitizedData,
+            message: 'Food scan processed successfully',
+          },
+        });
+      } catch (dbError) {
+        await connection.rollback();
+        throw dbError;
+      } finally {
+        connection.release();
+      }
+    } catch (error) {
+      return next(error);
+    }
+  },
+
+  /**
+   * Gets user's meal history with pagination
+   * Returns meal log entries joined with food details
+   */
+  async getMealHistory(req, res, next) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({
+          status: 'fail',
+          message: 'Authentication required',
+        });
+      }
+
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = parseInt(req.query.limit, 10) || 10;
+      const offset = (page - 1) * limit;
+
+      const connection = await pool.getConnection();
+      try {
+        // Get paginated meal history
+        const [meals] = await connection.execute(
+          `SELECT ml.id, ml.consumed_at, ml.notes, 
+                  f.name, f.ingredients, f.calories, f.image_path
+           FROM meal_log ml
+           JOIN foods f ON ml.food_id = f.id
+           WHERE ml.user_id = ?
+           ORDER BY ml.consumed_at DESC
+           LIMIT ? OFFSET ?`,
+          [userId, limit, offset]
+        );
+
+        // Get total count for pagination
+        const [totalCount] = await connection.execute(
+          `SELECT COUNT(*) as total FROM meal_log WHERE user_id = ?`,
+          [userId]
+        );
+
+        return res.status(200).json({
+          status: 'success',
+          data: {
+            meals: meals.map(meal => ({
+              ...meal,
+              ingredients: JSON.parse(meal.ingredients),
+            })),
+            pagination: {
+              page,
+              limit,
+              total: totalCount[0].total,
+              pages: Math.ceil(totalCount[0].total / limit),
+            },
+          },
+        });
+      } finally {
+        connection.release();
+      }
+    } catch (error) {
+      console.error('Error fetching meal history:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to retrieve meal history',
+      });
+    }
+  },
+
+  /**
    * Gets list of supported African regions for food analysis
    */
   async getRegions(req, res, next) {
@@ -382,6 +573,7 @@ const foodController = {
           redis: 'unknown',
           ai: 'unknown',
           calorie: 'unknown',
+          database: 'unknown',
         },
         version: process.env.APP_VERSION || '1.0.0',
         environment: process.env.NODE_ENV || 'development',
@@ -395,14 +587,23 @@ const foodController = {
         status.services.redis = 'unhealthy';
       }
 
-      // Check AI service (you can implement actual health check)
+      // Check Database connection
       try {
-        // This would be replaced with actual AI service health check
+        const connection = await pool.getConnection();
+        await connection.ping();
+        connection.release();
+        status.services.database = 'healthy';
+      } catch (dbError) {
+        status.services.database = 'unhealthy';
+      }
+
+      // Check AI service
+      try {
         if (aiService && typeof aiService.healthCheck === 'function') {
           await aiService.healthCheck();
           status.services.ai = 'healthy';
         } else {
-          status.services.ai = 'healthy'; // Assume healthy if no health check method
+          status.services.ai = 'healthy';
         }
       } catch (aiError) {
         status.services.ai = 'unhealthy';
@@ -410,12 +611,11 @@ const foodController = {
 
       // Check Calorie service
       try {
-        // This would be replaced with actual calorie service health check
         if (calorieService && typeof calorieService.healthCheck === 'function') {
           await calorieService.healthCheck();
           status.services.calorie = 'healthy';
         } else {
-          status.services.calorie = 'healthy'; // Assume healthy if no health check method
+          status.services.calorie = 'healthy';
         }
       } catch (calorieError) {
         status.services.calorie = 'unhealthy';
@@ -460,6 +660,14 @@ const foodController = {
       });
     }
 
+    // Handle database errors
+    if (err.code?.startsWith('ER_') || err.code?.startsWith('SQL')) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Database operation failed',
+      });
+    }
+
     return next(err);
   },
 };
@@ -471,6 +679,9 @@ export const {
   confirmFoodDetails,
   getFoods,
   getFoodById,
+  getCachedFoods,
+  processFoodScan,
+  getMealHistory,
   getRegions,
   getSystemStatus,
 } = foodController;
