@@ -6,9 +6,13 @@ import {
   getFoodById,
   calculateNutrition,
   handleFoodErrors,
+  getCachedFoods,
+  processFoodScan,
+  incrementFoodFrequency
 } from '../controllers/foodController';
 import { uploadMiddleware } from '../middlewares/uploadMiddleware';
 import { apiLimiter } from '../config/rateLimiter';
+import { auth } from '../middlewares/authMiddleware';
 
 const router = express.Router();
 
@@ -17,9 +21,14 @@ router.post('/analyze', uploadMiddleware, analyzeFoodImage);
 router.post('/confirm', confirmFoodDetails);
 router.post('/nutrition', calculateNutrition);
 
+// Cached food suggestions routes
+router.get('/cached', auth, apiLimiter, getCachedFoods);
+router.post('/scan', auth, uploadMiddleware, processFoodScan);
+router.put('/:id/increment', auth, incrementFoodFrequency);
+
 // Food history routes
-router.get('/', apiLimiter, getFoods);
-router.get('/:id', getFoodById);
+router.get('/', auth, apiLimiter, getFoods);
+router.get('/:id', auth, getFoodById);
 
 // Error handling middleware
 router.use(handleFoodErrors);
