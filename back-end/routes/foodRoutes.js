@@ -8,7 +8,8 @@ import {
   handleFoodErrors,
   getCachedFoods,
   processFoodScan,
-  incrementFoodFrequency
+  getRegions,
+  getSystemStatus
 } from '../controllers/foodController';
 import { uploadMiddleware } from '../middlewares/uploadMiddleware';
 import { apiLimiter } from '../config/rateLimiter';
@@ -24,11 +25,14 @@ router.post('/nutrition', calculateNutrition);
 // Cached food suggestions routes
 router.get('/cached', auth, apiLimiter, getCachedFoods);
 router.post('/scan', auth, uploadMiddleware, processFoodScan);
-router.put('/:id/increment', auth, incrementFoodFrequency);
 
 // Food history routes
 router.get('/', auth, apiLimiter, getFoods);
 router.get('/:id', auth, getFoodById);
+
+// Additional utility routes
+router.get('/regions', getRegions);
+router.get('/system/status', getSystemStatus);
 
 // Error handling middleware
 router.use(handleFoodErrors);
