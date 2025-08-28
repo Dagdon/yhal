@@ -1,6 +1,5 @@
 import React from 'react';
-import Header from '../components/Layout/Header';
-import '../styles/index.css';
+import '../../styles/index.css';
 
 /**
  * Home Page Component
@@ -9,9 +8,34 @@ import '../styles/index.css';
 const Home = () => {
   return (
     <div className="home-page">
-      {/* Reusable Header Component */}
-      <Header />
-      
+      {/* Header directly included */}
+      <header className="header">
+        <div className="header-container">
+          <a href="/" className="logo-link">
+            <img 
+              src="/images/yhal-logo.jpg" 
+              alt="YHAL Logo" 
+              className="logo"
+            />
+          </a>
+          
+          <nav className="nav">
+            <ul className="nav-list">
+              <li className="nav-item">
+                <a href="/signup" className="nav-link nav-link--primary">
+                  GET STARTED
+                </a>
+              </li>
+              <li className="nav-item">
+                <a href="/login" className="nav-link nav-link--secondary">
+                  LOG IN
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </header>
+
       {/* Hero Section */}
       <main className="hero">
         <div className="hero-container">
@@ -27,7 +51,7 @@ const Home = () => {
               src="/images/home-image.jpg" 
               alt="African cuisine examples" 
               className="hero-image"
-              loading="lazy" // Better performance
+              loading="lazy"
             />
           </div>
           
