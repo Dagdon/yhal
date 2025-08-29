@@ -1,73 +1,72 @@
-import React from 'react';
-import '../../styles/index.css';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import '../styles/home.css';
 
 /**
- * Home Page Component
- * Main landing page featuring hero section with food analysis introduction
+ * Dashboard Home Page
+ * Main dashboard accessible only to authenticated users
+ * Features meal analysis and recent meals overview
  */
 const Home = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Simple authentication check
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      navigate('/login', { replace: true });
+    }
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    navigate('/login');
+  };
+
   return (
-    <div className="home-page">
-      {/* Header directly included */}
-      <header className="header">
-        <div className="header-container">
+    <div className="dashboard-container">
+      {/* Header */}
+      <header className="dashboard-header">
+        <div className="header-content">
           <a href="/" className="logo-link">
             <img 
-              src="/images/yhal-logo.jpg" 
+              src="../../public/images/yhal-logo.jpg" 
               alt="YHAL Logo" 
-              className="logo"
+              className="dashboard-logo"
             />
           </a>
           
-          <nav className="nav">
-            <ul className="nav-list">
-              <li className="nav-item">
-                <a href="/signup" className="nav-link nav-link--primary">
-                  GET STARTED
-                </a>
-              </li>
-              <li className="nav-item">
-                <a href="/login" className="nav-link nav-link--secondary">
-                  LOG IN
-                </a>
-              </li>
-            </ul>
+          <nav className="dashboard-nav">
+            <a href="/history" className="nav-button">See Meal History</a>
+            <a href="/about" className="nav-button">About</a>
+            <button onClick={handleLogout} className="nav-button">Logout</button>
           </nav>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <main className="hero">
-        <div className="hero-container">
+      {/* Main Content */}
+      <main className="dashboard-main">
+        {/* Hero Section */}
+        <section className="hero-section">
           <h1 className="hero-title">
-            Snap a meal.<br />Know what's inside.
+            Snap a meal.<br />
+            Know what's inside.
           </h1>
-          
-          <div className="divider"></div>
-          
-          {/* Hero Image */}
-          <div className="hero-image-container">
-            <img 
-              src="/images/home-image.jpg" 
-              alt="African cuisine examples" 
-              className="hero-image"
-              loading="lazy"
-            />
-          </div>
-          
-          {/* Subtitle */}
-          <p className="hero-subtitle">
-            Use AI to analyze your African food – identify the ingredients,
-            learn about nutrition, and discover its cultural origin.
-          </p>
-          
-          {/* Call-to-Action Button */}
-          <div className="button-container">
-            <a href="/signup" className="cta-button">
-              GET STARTED
+          <a href="/analyze" className="analyze-button">
+            ANALYZE MEAL
+          </a>
+        </section>
+
+        {/* Recent Meals Section */}
+        <section className="recent-meals-section">
+          <h2 className="section-title">Recent Meals</h2>
+          <div className="empty-state">
+            <p className="empty-text">SCAN YOUR FIRST MEAL</p>
+            <a href="/analyze" className="scan-button">
+              Start Scanning
             </a>
           </div>
-        </div>
+        </section>
       </main>
     </div>
   );
