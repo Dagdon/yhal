@@ -1,12 +1,11 @@
-import mysql from 'mysql2/promise'; // MySQL library for database operations
-import dbConfig from '../config/db'; // Database configuration
+import pool from '../config/db.js'; // Database pool
 
 class Food {
   // Create a new food item
   static async create({
     name, ingredients, calories, image,
   }) {
-    const connection = await mysql.createConnection(dbConfig); // Create a database connection
+    const connection = await pool.getConnection();
     const query = `
       INSERT INTO foods (name, ingredients, calories, image)
       VALUES (?, ?, ?, ?)
@@ -17,13 +16,13 @@ class Food {
       const [result] = await connection.execute(query, values); // Execute the query
       return result.insertId; // Return the ID of the newly created food item
     } finally {
-      await connection.end(); // Close the database connection
+      connection.release();
     }
   }
 
   // Find a food item by ID
   static async findById(id) {
-    const connection = await mysql.createConnection(dbConfig); // Create a database connection
+    const connection = await pool.getConnection();
     const query = `
       SELECT * FROM foods
       WHERE id = ?
@@ -34,13 +33,13 @@ class Food {
       const [rows] = await connection.execute(query, values); // Execute the query
       return rows[0] || null; // Return the food item or null if not found
     } finally {
-      await connection.end(); // Close the database connection
+      connection.release();
     }
   }
 
   // Find all food items
   static async findAll() {
-    const connection = await mysql.createConnection(dbConfig); // Create a database connection
+    const connection = await pool.getConnection();
     const query = `
       SELECT * FROM foods
     `;
@@ -49,7 +48,7 @@ class Food {
       const [rows] = await connection.execute(query); // Execute the query
       return rows; // Added return statement to fix the warning
     } finally {
-      await connection.end(); // Close the database connection
+      connection.release();
     }
   }
 
@@ -57,7 +56,7 @@ class Food {
   static async update(id, {
     name, ingredients, calories, image,
   }) {
-    const connection = await mysql.createConnection(dbConfig); // Create a database connection
+    const connection = await pool.getConnection();
     const query = `
       UPDATE foods
       SET name = ?, ingredients = ?, calories = ?, image = ?
@@ -69,7 +68,7 @@ class Food {
       const [result] = await connection.execute(query, values); // Execute the query
       return result.affectedRows > 0; // Return true if the food item was updated
     } finally {
-      await connection.end(); // Close the database connection
+      connection.release();
     }
   }
 

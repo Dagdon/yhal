@@ -1,5 +1,5 @@
 import mysql from 'mysql2/promise';
-import dbConfig from '../config/db';
+import pool from '../config/db.js';
 
 // Define User model
 class User {
@@ -28,7 +28,7 @@ class User {
 
   // create a new user
   static async create(user) {
-    const connection = await mysql.createConnection(dbConfig); // Create a database connection
+    const connection = await pool.getConnection();
     const query = `
       INSERT INTO users (first_name, last_name, email, password, is_verified)
       VALUES (?, ?, ?, ?, ?)
@@ -39,13 +39,13 @@ class User {
       const [result] = await connection.execute(query, values); // Execute the query
       return result.insertId; // Return the ID of the newly created user
     } finally {
-      await connection.end(); // Close the database connection
+      connection.release();
     }
   }
 
   // find a user by email
   static async findByEmail(email) {
-    const connection = await mysql.createConnection(dbConfig); // Create a database connection
+    const connection = await pool.getConnection();
     const query = `
       SELECT * FROM users
       WHERE email = ?
@@ -56,13 +56,13 @@ class User {
       const [rows] = await connection.execute(query, values); // Execute the query
       return rows[0] || null; // Return the user object or null if not found
     } finally {
-      await connection.end(); // Close the database connection
+      connection.release();
     }
   }
 
   // Update User
   static async update(id, updatedUser) {
-    const connection = await mysql.createConnection(dbConfig); // Create a database connection
+    const connection = await pool.getConnection();
     const query = `
       UPDATE users
       SET first_name = ?, last_name = ?, email = ?, password = ?,
@@ -83,13 +83,13 @@ class User {
       const [result] = await connection.execute(query, values); // Execute the query
       return result.affectedRows > 0; // Return true if the user was updated
     } finally {
-      await connection.end(); // Close the database connection
+      connection.release();
     }
   }
 
   // Delete User by ID
   static async delete(id) {
-    const connection = await mysql.createConnection(dbConfig); // Create a database connection
+    const connection = await pool.getConnection();
     const query = `
       DELETE FROM users
       WHERE id = ?
@@ -100,13 +100,13 @@ class User {
       const [result] = await connection.execute(query, values); // Execute the query
       return result.affectedRows > 0; // Return true if the user was deleted
     } finally {
-      await connection.end(); // Close the database connection
+      connection.release();
     }
   }
 
   // Reset token methods
   static async setResetToken(email, token, expiry) {
-    const connection = await mysql.createConnection(dbConfig);
+    const connection = await pool.getConnection();
     const query = `
       UPDATE users
       SET reset_token = ?, reset_token_expiry = ?
@@ -118,12 +118,12 @@ class User {
       const [result] = await connection.execute(query, values);
       return result.affectedRows > 0;
     } finally {
-      await connection.end();
+      connection.release();
     }
   }
 
   static async clearResetToken(email) {
-    const connection = await mysql.createConnection(dbConfig);
+    const connection = await pool.getConnection();
     const query = `
       UPDATE users 
       SET reset_token = NULL, reset_token_expiry = NULL
@@ -135,12 +135,12 @@ class User {
       const [result] = await connection.execute(query, values);
       return result.affectedRows > 0;
     } finally {
-      await connection.end();
+      connection.release();
     }
   }
 
   static async findByResetToken(token) {
-    const connection = await mysql.createConnection(dbConfig);
+    const connection = await pool.getConnection();
     const query = `
       SELECT * FROM users 
       WHERE reset_token = ? 
@@ -152,13 +152,13 @@ class User {
       const [rows] = await connection.execute(query, values);
       return rows[0] || null;
     } finally {
-      await connection.end();
+      connection.release();
     }
   }
 
   // Email verification methods
   static async setVerificationToken(email, token) {
-    const connection = await mysql.createConnection(dbConfig);
+    const connection = await pool.getConnection();
     const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
     const query = `
       UPDATE users
@@ -171,7 +171,7 @@ class User {
       const [result] = await connection.execute(query, values);
       return result.affectedRows > 0;
     } finally {
-      await connection.end();
+      connection.release();
     }
   }
 

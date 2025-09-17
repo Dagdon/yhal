@@ -5,11 +5,11 @@ import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import authRouter from './routes/authRoutes';
-import foodRouter from './routes/foodRoutes';
-import calorieRouter from './routes/calorieRoutes';
-import utilityRouter from './routes/utilityRoutes';
-import AppError from './utils/appError';
+import authRouter from './routes/authRoutes.js';
+import foodRouter from './routes/foodRoutes.js';
+import calorieRouter from './routes/calorieRoutes.js';
+import utilityRouter from './routes/utilityRoutes.js';
+import AppError from './utils/appError.js';
 
 dotenv.config();
 
@@ -52,13 +52,16 @@ app.all('*', (req, res, next) => {
 });
 
 // Error Handler (Using your AppError)
-app.use((err, req, res) => { // Removed 'next' parameter since it's unused
+// Centralized error handler with user-friendly responses
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   const status = err.status || 'error';
 
   res.status(statusCode).json({
     status,
-    message: err.message,
+    message: err.message || 'Something went wrong',
+    ...(process.env.NODE_ENV === 'development' ? { details: err.details, stack: err.stack } : {}),
   });
 });
 

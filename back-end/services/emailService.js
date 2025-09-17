@@ -14,7 +14,7 @@ requiredEnvVars.forEach((env) => {
 const lastEmailTimestamps = new Map();
 const RATE_LIMIT_MS = 60000; // 1 minute cooldown
 
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   service: process.env.EMAIL_SERVICE || 'gmail', // Fallback to Gmail
   auth: {
     user: process.env.EMAIL_USER,

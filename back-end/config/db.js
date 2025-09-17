@@ -8,26 +8,39 @@ dotenv.config();
 // Create connection pool
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: Number(process.env.DB_POOL_SIZE || 10),
   queueLimit: 0,
-  acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
 });
 
 // Test connection on startup
-(async () => {
+export const healthCheck = async () => {
   try {
     const connection = await pool.getConnection();
-    console.log('✅ Database connected successfully');
+    await connection.ping();
     connection.release();
+    return true;
   } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
-    process.exit(1);
+    return false;
+  }
+};
+
+// Test connection on startup (non-fatal in dev)
+(async () => {
+  const ok = await healthCheck();
+  if (ok) {
+    // eslint-disable-next-line no-console
+    console.log('✅ Database connected successfully');
+  } else {
+    // eslint-disable-next-line no-console
+    console.error('❌ Database connection failed');
+    if (process.env.NODE_ENV === 'production') process.exit(1);
   }
 })();
 

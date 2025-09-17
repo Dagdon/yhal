@@ -1,14 +1,8 @@
 import express from 'express';
-import {
-  registerUser,
-  loginUser,
-  logoutUser,
-  forgotPassword,
-  resetPassword,
-  resendVerification,
-  verifyEmail,
-} from '../controllers/authController';
-import { authLimiter } from '../config/rateLimiter';
+import { register as registerUser } from '../controllers/registerController.js';
+import { login as loginUser, logout as logoutUser } from '../controllers/loginController.js';
+import { requestReset as forgotPassword, resetPassword } from '../controllers/resetPasswordController.js';
+import { authLimiter } from '../config/rateLimiter.js';
 
 const router = express.Router();
 
@@ -22,7 +16,6 @@ router.post('/forgot-password', authLimiter, forgotPassword);
 router.patch('/reset-password/:token', resetPassword);
 
 // Email verification routes
-router.get('/verify-email/:token', verifyEmail);
-router.post('/resend-verification', authLimiter, resendVerification);
+// Deprecated verification routes are omitted as email validation is removed per spec
 
 export default router;

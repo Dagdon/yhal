@@ -1,16 +1,22 @@
 // Middleware for validating food data
 const validateFoodData = (req, res, next) => {
-  const { name, ingredients, calories } = req.body;
-
-  if (!name || !ingredients || !calories) {
-    return res.status(400).json({ message: 'Name, ingredients, and calories are required.' });
+  const { foodName, regionalOrigin, ingredients, nutrients, calories } = req.body;
+  if (!foodName || typeof foodName !== 'string') {
+    return res.status(400).json({ message: 'Food name is required.' });
   }
-
-  if (typeof calories !== 'number' || calories <= 0) {
-    return res.status(400).json({ message: 'Calories must be a positive number.' });
+  if (!regionalOrigin || typeof regionalOrigin !== 'string') {
+    return res.status(400).json({ message: 'Regional origin is required.' });
   }
-
-  return next(); // Added return
+  if (!Array.isArray(ingredients) || ingredients.length === 0) {
+    return res.status(400).json({ message: 'Ingredients must be a non-empty array.' });
+  }
+  if (nutrients && (typeof nutrients !== 'object' || nutrients === null)) {
+    return res.status(400).json({ message: 'Nutrients must be an object if provided.' });
+  }
+  if (calories !== undefined && (typeof calories !== 'number' || calories <= 0)) {
+    return res.status(400).json({ message: 'Calories must be a positive number if provided.' });
+  }
+  return next();
 };
 
 // Middleware for processing food images
@@ -24,29 +30,11 @@ const processFoodImage = (req, res, next) => {
 };
 
 // Middleware for checking food permissions
-const checkFoodPermissions = (req, res, next) => {
-  const { role } = req.user;
+const checkFoodPermissions = (req, res, next) => next();
 
-  if (role !== 'admin') {
-    return res.status(403).json({ message: 'You are not authorized to perform this action.' });
-  }
-
-  return next(); // Added return
-};
-
-// Image file validator
-const validateImageFile = (file) => {
-  if (!file) throw new Error('No file provided');
-
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-  if (!allowedTypes.includes(file.mimetype)) {
-    throw new Error('Invalid file type. Only JPEG/PNG allowed');
-  }
-
-  if (file.size > 5 * 1024 * 1024) {
-    throw new Error('File size exceeds 5MB limit');
-  }
-};
+// Image file validator now comes from utils/validationUtils; keep named export for compatibility
+import { validateImageFile as validateImageFileUtil } from '../utils/validationUtils.js';
+const validateImageFile = (file) => validateImageFileUtil(file);
 
 export {
   validateFoodData, processFoodImage, checkFoodPermissions, validateImageFile,

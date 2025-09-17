@@ -1,18 +1,34 @@
-import AppError from './appError';
+import AppError from './appError.js';
 
 export const validateImageFile = (file) => {
   if (!file) {
     throw new AppError('No image file provided', 400);
   }
-  // Check file type
-  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+  // Check file type: must be an image and not a vector/unsupported type
+  if (!file.mimetype || !file.mimetype.startsWith('image/')) {
+    throw new AppError('File must be an image type', 400);
+  }
+  const disallowedMimeTypes = ['image/svg+xml'];
+  if (disallowedMimeTypes.includes(file.mimetype)) {
+    throw new AppError('SVG images are not allowed', 400);
+  }
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
   if (!allowedMimeTypes.includes(file.mimetype)) {
-    throw new AppError('Only JPEG, PNG, and JPG images are allowed', 400);
+    throw new AppError('Only JPEG, PNG, JPG, or WEBP images are allowed', 400);
   }
   // Check file size (5MB max)
   const maxSize = 5 * 1024 * 1024; // 5MB
   if (file.size > maxSize) {
     throw new AppError('Image size exceeds 5MB limit', 400);
+  }
+  // Prevent thumbnails: reject very small files and common thumbnail naming
+  const minSize = 10 * 1024; // 10KB
+  if (file.size < minSize) {
+    throw new AppError('Thumbnail-sized images are not allowed', 400);
+  }
+  const filename = file.originalname || '';
+  if (/thumb|thumbnail|small/i.test(filename)) {
+    throw new AppError('Thumbnail images are not allowed', 400);
   }
 };
 

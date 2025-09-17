@@ -1,5 +1,6 @@
 import multer from 'multer'; // Middleware for handling multipart/form-data (file uploads)
 import path from 'path'; // Utility for working with file paths
+import { validateImageFile } from '../utils/validationUtils.js';
 
 // Configure storage for uploaded files
 const storage = multer.diskStorage({
@@ -16,11 +17,11 @@ const storage = multer.diskStorage({
 
 // File filter to allow only image files
 const fileFilter = (req, file, cb) => {
-  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg']; // Allowed image formats
-  if (allowedMimeTypes.includes(file.mimetype)) {
-    cb(null, true); // Accept the file
-  } else {
-    cb(new Error('Only JPEG, PNG, and JPG images are allowed!'), false); // Reject the file
+  try {
+    validateImageFile({ mimetype: file.mimetype, size: Number.MAX_SAFE_INTEGER, originalname: file.originalname });
+    cb(null, true);
+  } catch (err) {
+    cb(new Error(err.message || 'Invalid image file'), false);
   }
 };
 

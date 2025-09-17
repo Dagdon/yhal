@@ -1,9 +1,9 @@
 import express from 'express';
-import { getRegions, getSystemStatus } from '../controllers/foodController';
+import getFoodController from '../controllers/getFoodController.js';
 
 const router = express.Router();
 
-router.get('/regions', getRegions);
-router.get('/status', getSystemStatus);
+router.get('/regions', getFoodController.getRegions);
+router.get('/status', getFoodController.getStatus);
 
 export default router;

@@ -1,6 +1,6 @@
 import { RateLimiterRedis } from 'rate-limiter-flexible';
-import redisClient from './redisConfig';
-import AppError from '../utils/appError';
+import redisClient from './redisConfig.js';
+import AppError from '../utils/appError.js';
 
 const rateLimitConfigs = {
   auth: {

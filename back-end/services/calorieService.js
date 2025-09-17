@@ -3,21 +3,24 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 /**
- * Calculates nutrition from confirmed ingredients
- * @param {string[]} ingredients - Modified ingredient list from controller
- * @param {string} region - African region
+ * Calculates nutrition from confirmed inputs
+ * @param {string} name - Confirmed food name (optional but recommended)
+ * @param {string[]} ingredients - Confirmed or modified ingredient list
+ * @param {string} region - Regional origin (West/East/North/South/Central)
  * @returns {Promise<{
  *   calories: number,
  *   nutrients: {protein: number, carbs: number, fat: number}
  * }>}
  */
-const calculateNutrition = async (ingredients, region) => {
+const calculateNutrition = async (name, ingredients, region) => {
   if (!process.env.GEMINI_1_5_FLASH) {
     throw new Error('AI_API_KEY_NOT_CONFIGURED');
   }
 
-  const prompt = `Calculate nutrition for ${region} African dish with these ingredients:
-    ${ingredients.join(', ')}.
+  const prompt = `Calculate nutrition for an African dish.
+    Name: ${name || 'Unknown'}
+    Region: ${region}
+    Ingredients: ${ingredients.join(', ')}
     Return ONLY JSON: {
       calories: number,
       nutrients: {protein: number, carbs: number, fat: number}

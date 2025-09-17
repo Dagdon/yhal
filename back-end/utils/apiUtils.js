@@ -1,6 +1,6 @@
 import { rateLimit } from 'express-rate-limit';
-import redis from 'redis';
-import { createHash } from 'crypto';
+import { generateCacheKey, getCache, setCache } from './cacheUtils.js';
+import { paginateArray, buildPagination } from './paginationUtils.js';
 
 // API RESPONSE HANDLERS
 export const successResponse = (res, data, message = 'Success', statusCode = 200) => res.status(statusCode).json({
@@ -31,35 +31,14 @@ export const apiRateLimiter = rateLimit({
   standardHeaders: true,
 });
 
-// CACHING UTILITIES
-let redisClient;
-
-const initRedis = async () => {
-  redisClient = redis.createClient();
-  redisClient.on('error', (err) => console.error('Redis Client Error', err));
-  await redisClient.connect();
-};
-await initRedis();
-
-const generateCacheKey = (req) => {
-  const {
-    method, originalUrl, body, query,
-  } = req;
-  const keyData = {
-    method, originalUrl, body, query,
-  };
-  return `cache:${createHash('md5').update(JSON.stringify(keyData)).digest('hex')}`;
-};
-
+// CACHING UTILITIES (delegated to cacheUtils)
 export const checkCache = async (req, res, next) => {
   try {
     const key = generateCacheKey(req);
-    const cachedData = await redisClient.get(key);
-
+    const cachedData = await getCache(key);
     if (cachedData) {
-      return successResponse(res, JSON.parse(cachedData), 'Data served from cache');
+      return successResponse(res, cachedData, 'Data served from cache');
     }
-
     req.cacheKey = key;
     return next();
   } catch (err) {
@@ -67,13 +46,7 @@ export const checkCache = async (req, res, next) => {
   }
 };
 
-export const saveToCache = async (key, data, ttl = 3600) => {
-  try {
-    await redisClient.setEx(key, ttl, JSON.stringify(data));
-  } catch (err) {
-    console.error('Cache save error:', err);
-  }
-};
+export const saveToCache = async (key, data, ttl = 3600) => setCache(key, data, ttl);
 
 // VALIDATION MIDDLEWARE
 export const validateApiKey = (req, res, next) => {
@@ -96,28 +69,9 @@ export const validateRegion = (req, res, next) => {
   return next();
 };
 
-// PAGINATION UTILITIES
-export const paginate = (totalItems, currentPage = 1, perPage = 10) => {
-  const totalPages = Math.ceil(totalItems / perPage);
-
-  return {
-    totalItems,
-    currentPage: Number(currentPage),
-    totalPages,
-    hasNext: currentPage < totalPages,
-    hasPrev: currentPage > 1,
-  };
-};
-
-export const paginateResults = (data, page = 1, limit = 10) => {
-  const startIdx = (page - 1) * limit;
-  const endIdx = page * limit;
-
-  return {
-    pagination: paginate(data.length, page, limit),
-    results: data.slice(startIdx, endIdx),
-  };
-};
+// PAGINATION UTILITIES (delegated to paginationUtils)
+export const paginate = buildPagination;
+export const paginateResults = paginateArray;
 
 export default {
   successResponse,
